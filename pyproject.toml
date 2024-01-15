@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "site-archiver"
+version = "0.1.0"
+description = "a tool to archive information from various fiction sites"
+authors = ["Hawken Rives <site-archiver@hawkrives.fastmail.fm>"]
+license = "AGPL3"
+readme = "README.md"
+packages = [{ include = "story_archiver", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+apsw = "^3.44.2.0"
+kdl-py = "^1.1.6"
+chardet = "^5.2.0"
+httpx = { extras = ["http2", "brotli"], version = "^0.26.0" }
+rich = "^13.7.0"
+typer = { extras = ["all"], version = "^0.9.0" }
+structlog = "^23.3.0"
+beautifulsoup4 = "^4.12.2"
+charset-normalizer = {extras = ["unicode-backport"], version = "^3.3.2"}
+retry2 = "^0.9.5"
+lxml = "^5.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.1.10"
+pytest = "^7.4.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# format = true
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
+docstring-code-line-length = 72
+skip-magic-trailing-comma = false

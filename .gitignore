@@ -1,0 +1,6 @@
+.devenv
+.DS_Store
+*.sqlite3*
+*.kdl
+*.db4
+*.pyc
