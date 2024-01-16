@@ -1,0 +1,18 @@
+site "hawken.is" {
+    start-url (url)"https://hawken.is/"
+    fetch-delay 60.0
+
+    include-rule (urlpattern)"*://hawken.is/*"
+    
+    exclude-rule (urlpattern)"*://hawken.is/robots.txt"
+
+    authentication method="post" action=(url)"https://auth.hawken.is/example" {
+        field login_username="me"
+        field login_password="passwd"
+    }
+
+    // by default, 403 and 401 are treated as authentication failures, and the log-in is processed.
+    // The `unauthorized-when` node allows us to handle sites that don't use those codes...
+    unauthorized-when body="<title>One Moment Please...</title>"
+    unauthorized-when body="<b>This item is reserved for Registered Members.</b>"
+}
