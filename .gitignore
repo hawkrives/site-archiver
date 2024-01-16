@@ -4,3 +4,8 @@
 *.kdl
 *.db4
 *.pyc
+
+
+# Added by cargo
+
+/target
