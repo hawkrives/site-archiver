@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 import json
 from pathlib import Path
 import time
-from typing import Annotated, Callable, Iterable, Iterator, Optional, TypeVar
+from typing import Annotated, Callable, Iterable, Iterator, Literal, Optional, TypeVar
 from urllib.parse import urldefrag
 
 from bs4 import BeautifulSoup
@@ -264,18 +264,21 @@ def ensure_schema(db: apsw.Connection):
         log.info('tx complete!')
 
 
-def connect(database_file: Path):
+def connect(database_file: Path, *, check: None | Literal['quick'] | Literal['full'] = None):
     connection = apsw.Connection(str(database_file))
     connection.row_trace = apsw.ext.DataClassRowFactory()
 
-    # Useful at startup to detect some database corruption
-    log.info('executing quick_check on database')
-    check = connection.pragma('quick_check')
-    if check != 'ok':
-        print('Quick check errors', check)
+    if check == 'quick':
+        # Useful at startup to detect some database corruption
+        log.info('executing quick_check on database')
+        result = connection.pragma('quick_check')
+        if result != 'ok':
+            print('Quick check errors', result)
+    elif check == 'full':
         log.info('executing integrity_check on database')
-        check = connection.pragma('integrity_check')
-        print('Integrity check errors', check)
+        result = connection.pragma('integrity_check')
+        if result != 'ok':
+            print('Integrity check errors', result)
 
     ensure_schema(connection)
     return connection
@@ -696,6 +699,7 @@ def show_response(
 def crawl(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
     database_file: Optional[Path] = None,
+    check: bool = True,
     once: bool = False,
     batch_size: int = 50,
     fetch_batch_size: int = 0,
@@ -706,7 +710,7 @@ def crawl(
     log.info(f'waiting {site_config.fetch_delay.total_seconds()} seconds between requests')
     database_file = database_file or config_file.with_suffix('.sqlite3')
 
-    db = connect(database_file)
+    db = connect(database_file, check='quick' if check else None)
 
     with init_client() as client:
         log.info('Inserting the start URL')
