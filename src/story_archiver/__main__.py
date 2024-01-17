@@ -820,12 +820,7 @@ def validate_config(config_file: Path) -> None:
     for i, site in enumerate(config.sites):
         border_color = colors[i % len(colors)]
         table.add_row(
-            rich.panel.Panel.fit(
-                rich.pretty.Pretty(site),
-                title=f'[b]{site.name}[/b]',
-                border_style=border_color,
-                # padding=(1, 3),
-            ),
+            rich.panel.Panel.fit(rich.pretty.Pretty(site), title=f'[b]{site.name}[/b]', border_style=border_color)
         )
 
     console.print(table)
