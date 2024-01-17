@@ -38,6 +38,8 @@ app = typer.Typer()
 console = rich.console.Console()
 err_console = rich.console.Console(stderr=True)
 
+last_fetch: datetime.datetime | None = None
+
 
 @dataclass(frozen=True)
 class UrlRule:
@@ -453,6 +455,19 @@ def fetch_url(
     is_retry: bool = False,
 ) -> None:
     try:
+        global last_fetch
+        if last_fetch is None:
+            # just update the last_fetch time
+            last_fetch = datetime.datetime.now()
+        elif (datetime.datetime.now() - last_fetch) < config.fetch_delay:
+            # calculate how much time is remaining
+            remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
+            if remaining.total_seconds() > 0:
+                # delay the next fetch
+                time.sleep(remaining.total_seconds())
+            # and update the last_fetch time
+            last_fetch = datetime.datetime.now()
+
         r = get_document(client=client, url=url)
         record_http_pair(db, link_id=source_link_id, response=r, unauthorization_rules=config.unauthorized_when)
     except httpx.HTTPStatusError as http_error:
@@ -491,8 +506,6 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
                 config=config,
             )
 
-            progress.update(task, description=f'[yellow] {queued.url}')
-            time.sleep(config.fetch_delay.total_seconds())
             progress.update(task, advance=1)
 
 
