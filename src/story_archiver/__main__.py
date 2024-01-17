@@ -457,6 +457,21 @@ def authenticate(*, config: ConfigSite, client: httpx.Client) -> httpx.Response:
     return client.post(config.authentication.action, data=config.authentication.fields)
 
 
+def delay_urlfetch(*, config: ConfigSite) -> None:
+    global last_fetch
+    if last_fetch is None:
+        # just update the last_fetch time
+        last_fetch = datetime.datetime.now()
+    elif (datetime.datetime.now() - last_fetch) < config.fetch_delay:
+        # calculate how much time is remaining
+        remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
+        if remaining.total_seconds() > 0:
+            # delay the next fetch
+            time.sleep(remaining.total_seconds())
+        # and update the last_fetch time
+        last_fetch = datetime.datetime.now()
+
+
 def fetch_url(
     *,
     client: httpx.Client,
@@ -467,19 +482,6 @@ def fetch_url(
     is_retry: bool = False,
 ) -> None:
     try:
-        global last_fetch
-        if last_fetch is None:
-            # just update the last_fetch time
-            last_fetch = datetime.datetime.now()
-        elif (datetime.datetime.now() - last_fetch) < config.fetch_delay:
-            # calculate how much time is remaining
-            remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
-            if remaining.total_seconds() > 0:
-                # delay the next fetch
-                time.sleep(remaining.total_seconds())
-            # and update the last_fetch time
-            last_fetch = datetime.datetime.now()
-
         r = get_document(client=client, url=url)
         record_http_pair(db, link_id=source_link_id, response=r, unauthorization_rules=config.unauthorized_when)
     except httpx.HTTPStatusError as http_error:
@@ -506,7 +508,7 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
     with progress_bar(transient=True) as progress:
         task = progress.add_task('[green]Fetching...', total=len(pending_fetch))
 
-        for queued in pending_fetch:
+        for i, queued in enumerate(pending_fetch):
             progress.update(task, description=f'[green] {queued.url}')
             # log.info(f'GET {queued.url}')
 
@@ -517,6 +519,14 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
                 db=db,
                 config=config,
             )
+
+            if i == len(queued) - 1:
+                # if we're on the last item, skip the delay between fetches
+                pass
+            else:
+                # otherwise, enforce the delay
+                progress.update(task, description=f'[yellow] fetched {queued.url}')
+                delay_urlfetch(config=config)
 
             progress.update(task, advance=1)
 
