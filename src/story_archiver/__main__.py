@@ -236,8 +236,10 @@ def connect(database_file: Path):
     connection.row_trace = apsw.ext.DataClassRowFactory()
 
     # Useful at startup to detect some database corruption
-    check = connection.pragma('integrity_check')
+    check = connection.pragma('quick_check')
     if check != 'ok':
+        print('Quick check errors', check)
+        check = connection.pragma('integrity_check')
         print('Integrity check errors', check)
 
     ensure_schema(connection)
