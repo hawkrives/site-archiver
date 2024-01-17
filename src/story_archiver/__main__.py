@@ -713,7 +713,7 @@ def crawl(
     db = connect(database_file, check='quick' if check else None)
 
     with init_client() as client:
-        log.info('Inserting the start URL')
+        # insert the starting URL
         insert_link(db, site_config.start_url)
 
         while True:
