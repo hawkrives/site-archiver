@@ -75,7 +75,7 @@ class Authentication:
     @staticmethod
     def from_kdl(obj: kdl.types.Node) -> 'Authentication':
         method = obj.props['method']
-        action = obj.props['action']
+        action = httpx.URL(obj.props['action'])
         fields = {}
         for field in obj.getAll('field'):
             fields.update(field.props)
@@ -109,7 +109,7 @@ class ConfigSite:
         auth = obj.get('authentication')
         return ConfigSite(
             name=obj.args[0],
-            start_url=start_url.args[0],
+            start_url=httpx.URL(start_url.args[0]),
             include_rules=[UrlRule.from_kdl(node) for node in obj.getAll('include-rule')],
             exclude_rules=[UrlRule.from_kdl(node) for node in obj.getAll('exclude-rule')],
             fetch_delay=datetime.timedelta(
