@@ -477,7 +477,6 @@ def delay_urlfetch(*, config: ConfigSite) -> None:
     time.sleep(config.fetch_delay.total_seconds())
     return
 
-    last_fetch = datetime.datetime.now()
     global last_fetch
     if last_fetch is None:
         # just update the last_fetch time
