@@ -522,7 +522,7 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
                 config=config,
             )
 
-            if i == len(queued) - 1:
+            if i == len(pending_fetch) - 1:
                 # if we're on the last item, skip the delay between fetches
                 pass
             else:
