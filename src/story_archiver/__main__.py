@@ -304,7 +304,7 @@ def record_http_request(db: apsw.Connection, *, link_id: int, request: httpx.Req
         request_row = db.execute(
             """
             INSERT INTO request(link_id, method, url, headers, body)
-            VALUES (:link_id, :method, :url, :headers, :body)
+            VALUES (:link_id, :method, :url, jsonb(:headers), :body)
             RETURNING id
             """,
             dict(
@@ -351,7 +351,7 @@ def record_http_response(
         response_row = db.execute(
             """
             INSERT INTO response(link_id, request_id, status_code, url, headers, body, encoding)
-            VALUES (:link_id, :request_id, :status_code, :url, :headers, :body, :encoding)
+            VALUES (:link_id, :request_id, :status_code, :url, jsonb(:headers), :body, :encoding)
             RETURNING id
             """,
             dict(
