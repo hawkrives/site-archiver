@@ -109,7 +109,7 @@ class ConfigSite:
 
         fetch_delay_value = fetch_delay_node.args[0] if fetch_delay_node else '1s'
         if isinstance(fetch_delay_value, float):
-            fetch_delay_value = str(fetch_delay_value)
+            fetch_delay_value = f'{fetch_delay_value}s'
         fetch_delay = datetime.timedelta(seconds=pytimeparse.parse(fetch_delay_value) or 60)
 
         start_url = obj.get('start-url')
