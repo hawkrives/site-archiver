@@ -1,4 +1,6 @@
-use std::str::FromStr;
+#![allow(dead_code)]
+
+use std::{collections::HashMap, path::Path};
 
 use miette::{Context, IntoDiagnostic};
 
@@ -31,28 +33,17 @@ pub(crate) struct Authentication {
 }
 
 #[derive(knuffel::Decode, Debug)]
-pub(crate) struct AuthenticationField {
-    #[knuffel(property, str)]
-    name: String,
-    #[knuffel(property, str)]
-    value: String,
-}
+pub(crate) struct AuthenticationField(#[knuffel(properties)] HashMap<String, String>);
 
 #[derive(knuffel::Decode, Debug)]
-pub(crate) struct StartUrl {
-    #[knuffel(argument, str)]
-    pub(crate) url: reqwest::Url,
-}
+pub(crate) struct StartUrl(#[knuffel(argument, str)] pub(crate) reqwest::Url);
 
 #[derive(knuffel::Decode, Debug)]
-pub(crate) struct FetchDelay {
-    #[knuffel(argument)]
-    pub(crate) delay: f64,
-}
+pub(crate) struct FetchDelay(#[knuffel(argument, str)] pub(crate) humantime::Duration);
 
 impl Default for FetchDelay {
     fn default() -> Self {
-        Self { delay: 0.5 }
+        Self("0.5s".parse().unwrap())
     }
 }
 
@@ -68,10 +59,10 @@ pub(crate) struct UnauthorizedHeuristic {
     pub(crate) body: Option<String>,
 }
 
-pub(crate) fn parse_config(path: &str) -> miette::Result<Vec<SiteConfig>> {
+pub(crate) fn parse_config(path: &Path) -> miette::Result<Vec<SiteConfig>> {
     let text = std::fs::read_to_string(path)
         .into_diagnostic()
         .wrap_err_with(|| format!("cannot read {:?}", path))?;
 
-    Ok(knuffel::parse(path, &text)?)
+    Ok(knuffel::parse(&path.to_string_lossy(), &text)?)
 }
