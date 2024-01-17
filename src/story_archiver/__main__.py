@@ -474,17 +474,23 @@ def authenticate(*, config: ConfigSite, client: httpx.Client) -> httpx.Response:
 
 
 def delay_urlfetch(*, config: ConfigSite) -> None:
+    time.sleep(config.fetch_delay.total_seconds())
+    return
+
+    last_fetch = datetime.datetime.now()
     global last_fetch
     if last_fetch is None:
         # just update the last_fetch time
         last_fetch = datetime.datetime.now()
-    elif (datetime.datetime.now() - last_fetch) < config.fetch_delay:
+    elif (datetime.datetime.now() - last_fetch) <= config.fetch_delay:
         # calculate how much time is remaining
-        remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
-        if remaining.total_seconds() > 0:
-            # delay the next fetch
-            time.sleep(remaining.total_seconds())
+        # remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
+        # if remaining.total_seconds() > 0:
+        #     # delay the next fetch
+        #     time.sleep(remaining.total_seconds())
         # and update the last_fetch time
+
+        time.sleep(config.fetch_delay.total_seconds())
         last_fetch = datetime.datetime.now()
 
 
