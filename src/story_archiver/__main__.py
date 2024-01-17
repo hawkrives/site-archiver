@@ -47,7 +47,7 @@ class UrlRule:
             return f'UrlRule(query_key={self.query_key!r})'
         if self.pattern is not None:
             return f'UrlRule({self.pattern!r})'
-        return "UrlRule()"
+        return 'UrlRule()'
 
     @staticmethod
     def from_kdl(obj: kdl.types.Node) -> 'UrlRule':
@@ -62,6 +62,7 @@ class UrlRule:
             if self.query_key in url.params:
                 return True
         return False
+
 
 @dataclass
 class Authentication:
@@ -111,7 +112,7 @@ class ConfigSite:
             exclude_rules=[UrlRule.from_kdl(node) for node in obj.getAll('exclude-rule')],
             fetch_delay=fetch_delay.args[0] if fetch_delay else 1.0,
             authentication=Authentication.from_kdl(auth) if auth else None,
-            unauthorized_when=[UnauthorizationRule.from_kdl(node) for node in obj.getAll('unauthorized-when')]
+            unauthorized_when=[UnauthorizationRule.from_kdl(node) for node in obj.getAll('unauthorized-when')],
         )
 
     def match_url(self, url: httpx.URL) -> bool:
@@ -244,7 +245,9 @@ def connect(database_file: Path):
 
 
 retry_on_busy = retry(apsw.BusyError, delay=0.1, jitter=(0, 0.2), max_delay=2, tries=10)
-retry_on_connectionerror = retry((httpx.RemoteProtocolError, httpx.ReadTimeout), delay=1, jitter=(0, 5), max_delay=30, tries=10)
+retry_on_connectionerror = retry(
+    (httpx.RemoteProtocolError, httpx.ReadTimeout), delay=1, jitter=(0, 5), max_delay=30, tries=10
+)
 
 ReadableFile = typer.Option(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True)
 WritableFile = typer.Option(file_okay=True, dir_okay=False, writable=True, readable=True)
@@ -308,7 +311,14 @@ def record_http_request(db: apsw.Connection, *, link_id: int, request: httpx.Req
         return request_row.id
 
 
-def record_http_response(db: apsw.Connection, *, link_id: int, request_id: int, response: httpx.Response, unauthorization_rules: list[UnauthorizationRule]) -> int:
+def record_http_response(
+    db: apsw.Connection,
+    *,
+    link_id: int,
+    request_id: int,
+    response: httpx.Response,
+    unauthorization_rules: list[UnauthorizationRule],
+) -> int:
     with db:
         content = response.read()
         encoding = detect_encoding_or_binary(content)
@@ -328,7 +338,7 @@ def record_http_response(db: apsw.Connection, *, link_id: int, request_id: int, 
                 # if we're configured to do so, overwrite the 200 with a 401 and raise an error
                 response.status_code = 401
                 response.raise_for_status()
-                assert False, "we should not be at this point"
+                assert False, 'we should not be at this point'
                 # raise httpx.HTTPStatusError('Unauthorized', request=None, response=response)
 
         response_row = db.execute(
@@ -352,12 +362,16 @@ def record_http_response(db: apsw.Connection, *, link_id: int, request_id: int, 
 
 
 @retry_on_busy
-def record_http_pair(db: apsw.Connection, *, link_id: int, response: httpx.Response, unauthorization_rules: list[UnauthorizationRule]) -> None:
+def record_http_pair(
+    db: apsw.Connection, *, link_id: int, response: httpx.Response, unauthorization_rules: list[UnauthorizationRule]
+) -> None:
     with db:
         request_id = record_http_request(db, link_id=link_id, request=response.request)
 
         for r in [*response.history, response]:
-            record_http_response(db, link_id=link_id, request_id=request_id, response=r, unauthorization_rules=unauthorization_rules)
+            record_http_response(
+                db, link_id=link_id, request_id=request_id, response=r, unauthorization_rules=unauthorization_rules
+            )
 
 
 @retry_on_busy
@@ -417,14 +431,22 @@ def get_document(*, client: httpx.Client, url: httpx.URL | str) -> httpx.Respons
 
 @retry_on_connectionerror
 def authenticate(*, config: ConfigSite, client: httpx.Client) -> httpx.Response:
-    assert config.authentication, "config.authentication must be set"
+    assert config.authentication, 'config.authentication must be set'
     log.info(f'authenticating with {config.authentication.action}')
     if config.authentication.method != 'post':
         raise ValueError('we only know how to handle post requests')
     return client.post(config.authentication.action, data=config.authentication.fields)
 
 
-def fetch_url(*, client: httpx.Client, source_link_id: int, url: httpx.URL | str, database_file: Path, config: ConfigSite, is_retry: bool = False) -> None:
+def fetch_url(
+    *,
+    client: httpx.Client,
+    source_link_id: int,
+    url: httpx.URL | str,
+    database_file: Path,
+    config: ConfigSite,
+    is_retry: bool = False,
+) -> None:
     try:
         r = get_document(client=client, url=url)
         with connect(database_file) as db:
@@ -435,7 +457,14 @@ def fetch_url(*, client: httpx.Client, source_link_id: int, url: httpx.URL | str
 
         if config.authentication:
             authenticate(client=client, config=config)
-            fetch_url(client=client, source_link_id=source_link_id, url=url, database_file=database_file, config=config, is_retry=True)
+            fetch_url(
+                client=client,
+                source_link_id=source_link_id,
+                url=url,
+                database_file=database_file,
+                config=config,
+                is_retry=True,
+            )
         else:
             raise http_error
 
@@ -452,10 +481,10 @@ def fetch_documents(*, database_file: Path, config: ConfigSite, client: httpx.Cl
             # log.info(f'GET {queued.url}')
 
             fetch_url(
-                client=client, 
-                url=queued.url, 
-                source_link_id=queued.id, 
-                database_file=database_file, 
+                client=client,
+                url=queued.url,
+                source_link_id=queued.id,
+                database_file=database_file,
                 config=config,
             )
 
@@ -563,6 +592,8 @@ def update_sitemap(db: apsw.Connection, *, source: httpx.URL, target: httpx.URL)
 
 
 T = TypeVar('T')
+
+
 def partition(pred: Callable[[T], bool], it: Iterable[T]) -> tuple[list[T], list[T]]:
     # found via https://giannitedesco.github.io/2020/12/14/a-faster-partition-function.html
     ts = []
@@ -644,18 +675,18 @@ def crawl_tree(
     # console.print(config)
 
     job_progress = rich.progress.Progress(
-        "{task.description}",
+        '{task.description}',
         rich.progress.SpinnerColumn(),
         rich.progress.BarColumn(),
-        rich.progress.TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        rich.progress.TextColumn('[progress.percentage]{task.percentage:>3.0f}%'),
     )
 
     for i, site in enumerate(config.sites):
-        job_progress.add_task(site.name, total=100*(i+1))
+        job_progress.add_task(site.name, total=100 * (i + 1))
 
     progress_table = rich.table.Table.grid()
     progress_table.add_row(
-        rich.panel.Panel.fit(job_progress, title="[b]Sites[/b]", border_style="yellow", padding=(1, 3)),
+        rich.panel.Panel.fit(job_progress, title='[b]Sites[/b]', border_style='yellow', padding=(1, 3)),
     )
 
     all_done = False
@@ -716,7 +747,7 @@ def sitemap(
 def validate_config(config_file: Path) -> None:
     config = parse_config(config_file)
 
-    colors = ["bright_black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+    colors = ['bright_black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white']
 
     table = rich.table.Table.grid()
     for i, site in enumerate(config.sites):
@@ -724,7 +755,7 @@ def validate_config(config_file: Path) -> None:
         table.add_row(
             rich.panel.Panel.fit(
                 rich.pretty.Pretty(site),
-                title=f"[b]{site.name}[/b]",
+                title=f'[b]{site.name}[/b]',
                 border_style=border_color,
                 # padding=(1, 3),
             ),
