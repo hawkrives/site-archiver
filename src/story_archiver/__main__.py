@@ -700,6 +700,7 @@ def crawl(
 ):
     config = parse_config(config_file)
     site_config = config.sites[0]
+    log.info(f'waiting {site_config.fetch_delay.total_seconds()} seconds between requests')
     database_file = database_file or config_file.with_suffix('.sqlite3')
 
     with connect(database_file) as db, init_client() as client:
