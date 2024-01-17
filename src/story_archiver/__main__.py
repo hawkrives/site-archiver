@@ -436,7 +436,8 @@ def progress_bar(*, transient: bool):
 
 
 def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 100) -> None:
-    pending_parse: list[QueuedUrl] = list(db.execute(f'SELECT url, id FROM parse_queue LIMIT {batch_size}'))
+    with db:
+        pending_parse: list[QueuedUrl] = list(db.execute(f'SELECT url, id FROM parse_queue LIMIT {batch_size}'))
 
     with progress_bar(transient=True) as progress:
         task = progress.add_task('[red]Parsing...', total=len(pending_parse))
@@ -445,15 +446,16 @@ def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 
             base_url = record.url
             progress.update(task, description=f'[cyan] {base_url}')
 
-            insert_link(db, base_url)
+            with db:
+                insert_link(db, base_url)
 
-            unique_links = parse_response_for_links(db, response_id=record.id)
-            for link in unique_links:
-                should_fetch = config.match_url(link)
-                insert_link(db, link, should_fetch)
-                update_sitemap(db, source=base_url, target=link)
+                unique_links = parse_response_for_links(db, response_id=record.id)
+                for link in unique_links:
+                    should_fetch = config.match_url(link)
+                    insert_link(db, link, should_fetch)
+                    update_sitemap(db, source=base_url, target=link)
 
-            mark_response_as_parsed(db, response_id=record.id)
+                mark_response_as_parsed(db, response_id=record.id)
 
             progress.update(task, advance=1)
 
@@ -523,7 +525,8 @@ def fetch_url(
 
 
 def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Client, batch_size: int = 50) -> None:
-    pending_fetch: list[QueuedUrl] = list(db.execute(f'SELECT id, url FROM fetch_queue LIMIT {batch_size}'))
+    with db:
+        pending_fetch: list[QueuedUrl] = list(db.execute(f'SELECT id, url FROM fetch_queue LIMIT {batch_size}'))
 
     with progress_bar(transient=True) as progress:
         task = progress.add_task('[green]Fetching...', total=len(pending_fetch))
@@ -711,9 +714,8 @@ def crawl(
         insert_link(db, site_config.start_url)
 
         while True:
-            with db:
-                fetch_documents(db=db, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
-                extract_links(db=db, config=site_config, batch_size=parse_batch_size or batch_size)
+            fetch_documents(db=db, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
+            extract_links(db=db, config=site_config, batch_size=parse_batch_size or batch_size)
 
             if once:
                 break
@@ -787,7 +789,7 @@ def fetch(
     database_file = database_file or config_file.with_suffix('.sqlite3')
     db = connect(database_file)
 
-    with init_client() as client, db:
+    with init_client() as client:
         fetch_documents(db=db, config=site_config, client=client, batch_size=batch_size)
 
 
@@ -802,8 +804,7 @@ def explore(
     database_file = database_file or config_file.with_suffix('.sqlite3')
     db = connect(database_file)
 
-    with db:
-        extract_links(db=db, config=site_config, batch_size=batch_size)
+    extract_links(db=db, config=site_config, batch_size=batch_size)
 
 
 @app.command()
