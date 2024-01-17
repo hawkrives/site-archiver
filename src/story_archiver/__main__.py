@@ -623,7 +623,7 @@ def partition(pred: Callable[[T], bool], it: Iterable[T]) -> tuple[list[T], list
 
 
 @app.command()
-def parse_links(
+def show_response(
     response_id: int,
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
     database_file: Optional[Path] = None,
@@ -748,7 +748,7 @@ def fetch(
 
 
 @app.command()
-def sitemap(
+def explore(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
     database_file: Optional[Path] = None,
     batch_size: int = 500,
