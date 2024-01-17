@@ -832,8 +832,19 @@ def validate_config(config_file: Path) -> None:
 
 
 @app.command()
-def extract():
-    pass
+def queue_url(
+    url: str,
+    config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
+    database_file: Optional[Path] = None,
+    check: bool = True,
+):
+    database_file = database_file or config_file.with_suffix('.sqlite3')
+    db = connect(database_file, check='quick' if check else None)
+
+    with db:
+        parsed_url = httpx.URL(url)
+        log.info(f'Inserting {parsed_url!r} into {database_file!r}')
+        insert_link(db, parsed_url)
 
 
 @app.command()
