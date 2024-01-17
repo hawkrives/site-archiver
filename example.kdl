@@ -1,14 +1,14 @@
 site "hawken.is" {
-    start-url (url)"https://hawken.is/"
+    start-url "https://hawken.is/"
     fetch-delay 60.0
 
-    include-rule (urlpattern)"*://hawken.is/*"
+    include-rule "*://hawken.is/*"
     
-    exclude-rule (urlpattern)"*://hawken.is/robots.txt"
+    exclude-rule "*://hawken.is/robots.txt"
 
-    authentication method="post" action=(url)"https://auth.hawken.is/example" {
-        field login_username="me"
-        field login_password="passwd"
+    authentication method="post" action="https://auth.hawken.is/example" {
+        field name="login_username" value="me"
+        field name="login_password" value="passwd"
     }
 
     // by default, 403 and 401 are treated as authentication failures, and the log-in is processed.
