@@ -445,16 +445,15 @@ def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 
             base_url = record.url
             progress.update(task, description=f'[cyan] {base_url}')
 
-            with db:
-                insert_link(db, base_url)
+            insert_link(db, base_url)
 
-                unique_links = parse_response_for_links(db, response_id=record.id)
-                for link in unique_links:
-                    should_fetch = config.match_url(link)
-                    insert_link(db, link, should_fetch)
-                    update_sitemap(db, source=base_url, target=link)
+            unique_links = parse_response_for_links(db, response_id=record.id)
+            for link in unique_links:
+                should_fetch = config.match_url(link)
+                insert_link(db, link, should_fetch)
+                update_sitemap(db, source=base_url, target=link)
 
-                mark_response_as_parsed(db, response_id=record.id)
+            mark_response_as_parsed(db, response_id=record.id)
 
             progress.update(task, advance=1)
 
