@@ -249,7 +249,7 @@ def ensure_schema(db: apsw.Connection):
             db.execute('UPDATE request SET headers = jsonb(headers);')
             after = db.execute('SELECT sum(length(headers)) AS size FROM request').fetchone()
             assert after
-            log.info(f'"request" table went from {before.size} bytes to {after.size} bytes')
+            log.info(f'"request" table went from {before.size:,} bytes to {after.size:,} bytes')
 
             log.info('updating "response" table')
             before = db.execute('SELECT sum(length(headers)) AS size FROM response').fetchone()
@@ -257,7 +257,7 @@ def ensure_schema(db: apsw.Connection):
             db.execute('UPDATE response SET headers = jsonb(headers);')
             after = db.execute('SELECT sum(length(headers)) AS size FROM response').fetchone()
             assert after
-            log.info(f'"response" table went from {before.size} bytes to {after.size} bytes')
+            log.info(f'"response" table went from {before.size:,} bytes to {after.size:,} bytes')
 
             log.info('update complete! completing tx')
             db.execute('PRAGMA user_version = 5;')
