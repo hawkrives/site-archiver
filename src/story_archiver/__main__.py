@@ -444,7 +444,7 @@ def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 
 
         for record in pending_parse:
             base_url = record.url
-            progress.update(task, description=f'[cyan] {base_url}')
+            progress.update(task, description=f'[cyan] PARSE {base_url}')
 
             with db:
                 insert_link(db, base_url)
@@ -532,11 +532,10 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
         task = progress.add_task('[green]Fetching...', total=len(pending_fetch))
 
         for queued in pending_fetch:
-            progress.update(task, description=f'[yellow] waiting before {queued.url}')
+            progress.update(task, description=f'[yellow] WAIT  {queued.url}')
             delay_urlfetch(config=config)
 
-            progress.update(task, description=f'[green] {queued.url}')
-            # log.info(f'GET {queued.url}')
+            progress.update(task, description=f'[green] GET   {queued.url}')
 
             fetch_url(
                 client=client,
