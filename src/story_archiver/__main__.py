@@ -243,11 +243,25 @@ def ensure_schema(db: apsw.Connection):
     if db.pragma('user_version') == 4:
         with db:
             log.info('updating "request" table')
+
+            before = db.execute('SELECT sum(length(headers)) AS size FROM request').fetchone()
+            assert before
             db.execute('UPDATE request SET headers = jsonb(headers);')
+            after = db.execute('SELECT sum(length(headers)) AS size FROM request').fetchone()
+            assert after
+            log.info(f'"request" table went from {before.size} bytes to {after.size} bytes')
+
             log.info('updating "response" table')
+            before = db.execute('SELECT sum(length(headers)) AS size FROM response').fetchone()
+            assert before
             db.execute('UPDATE response SET headers = jsonb(headers);')
-            log.info('update complete!')
+            after = db.execute('SELECT sum(length(headers)) AS size FROM response').fetchone()
+            assert after
+            log.info(f'"response" table went from {before.size} bytes to {after.size} bytes')
+
+            log.info('update complete! completing tx')
             db.execute('PRAGMA user_version = 5;')
+        log.info('tx complete!')
 
 
 def connect(database_file: Path):
