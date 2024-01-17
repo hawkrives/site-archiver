@@ -480,10 +480,10 @@ def delay_urlfetch(*, config: ConfigSite) -> None:
         last_fetch = datetime.datetime.now()
     elif (datetime.datetime.now() - last_fetch) < config.fetch_delay:
         # calculate how much time is remaining
-        # remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
-        # if remaining.total_seconds() > 0:
-        # delay the next fetch
-        time.sleep(config.fetch_delay.total_seconds())
+        remaining = config.fetch_delay - (datetime.datetime.now() - last_fetch)
+        if remaining.total_seconds() > 0:
+            # delay the next fetch
+            time.sleep(remaining.total_seconds())
         # and update the last_fetch time
         last_fetch = datetime.datetime.now()
 
