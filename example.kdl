@@ -1,6 +1,6 @@
 site "hawken.is" {
     start-url "https://hawken.is/"
-    fetch-delay "60s"
+    fetch-delay "1s"
 
     include-rule "*://hawken.is/*"
 
