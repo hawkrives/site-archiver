@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 import json
 from pathlib import Path
 import time
-from typing import Annotated, Callable, Iterable, Iterator, TypeVar
+from typing import Annotated, Callable, Iterable, Iterator, Optional, TypeVar
 from urllib.parse import urldefrag
 
 from bs4 import BeautifulSoup
@@ -613,9 +613,10 @@ def partition(pred: Callable[[T], bool], it: Iterable[T]) -> tuple[list[T], list
 def parse_links(
     response_id: int,
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
-    database_file: Annotated[Path, WritableFile] = Path('data.sqlite3'),
+    database_file: Optional[Path] = None,
 ) -> None:
     config = parse_config(config_file)
+    database_file = database_file or config_file.with_suffix('.sqlite3')
 
     with connect(database_file) as db:
         table = rich.table.Table(title=f'Outbound links from response-id {response_id}')
@@ -640,7 +641,7 @@ def parse_links(
 @app.command()
 def crawl(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
-    database_file: Annotated[Path, WritableFile] = Path('data.sqlite3'),
+    database_file: Optional[Path] = None,
     once: bool = False,
     batch_size: int = 50,
     fetch_batch_size: int = 0,
@@ -648,6 +649,7 @@ def crawl(
 ):
     config = parse_config(config_file)
     site_config = config.sites[0]
+    database_file = database_file or config_file.with_suffix('.sqlite3')
 
     with connect(database_file) as db, init_client() as client:
         log.info('Inserting the start URL')
@@ -668,7 +670,7 @@ def crawl(
 @app.command()
 def crawl_tree(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
-    database_file: Annotated[Path, WritableFile] = Path('data.sqlite3'),
+    database_file: Optional[Path] = None,
     once: bool = False,
 ):
     config = parse_config(config_file)
@@ -721,11 +723,12 @@ def crawl_tree(
 @app.command()
 def fetch(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
-    database_file: Annotated[Path, WritableFile] = Path('data.sqlite3'),
+    database_file: Optional[Path] = None,
     batch_size: int = 500,
 ):
     config = parse_config(config_file)
     site_config = config.sites[0]
+    database_file = database_file or config_file.with_suffix('.sqlite3')
 
     with init_client() as client, connect(database_file) as db:
         fetch_documents(db=db, config=site_config, client=client, batch_size=batch_size)
@@ -734,11 +737,12 @@ def fetch(
 @app.command()
 def sitemap(
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
-    database_file: Annotated[Path, WritableFile] = Path('data.sqlite3'),
+    database_file: Optional[Path] = None,
     batch_size: int = 500,
 ):
     config = parse_config(config_file)
     site_config = config.sites[0]
+    database_file = database_file or config_file.with_suffix('.sqlite3')
 
     with connect(database_file) as db:
         extract_links(db=db, config=site_config, batch_size=batch_size)
