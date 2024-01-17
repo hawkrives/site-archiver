@@ -1,5 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass
+import datetime
 from enum import Enum
 from fnmatch import fnmatch
 import json
@@ -16,6 +17,7 @@ import apsw.bestpractice
 import apsw.ext
 import httpx
 import kdl
+import pytimeparse
 import rich.console
 import rich.progress
 import rich.table
@@ -95,7 +97,7 @@ class ConfigSite:
     include_rules: list[UrlRule]
     exclude_rules: list[UrlRule]
     start_url: httpx.URL
-    fetch_delay: float  # timedelta?
+    fetch_delay: datetime.timedelta
     authentication: Authentication | None
     unauthorized_when: list[UnauthorizationRule]
 
@@ -110,7 +112,9 @@ class ConfigSite:
             start_url=start_url.args[0],
             include_rules=[UrlRule.from_kdl(node) for node in obj.getAll('include-rule')],
             exclude_rules=[UrlRule.from_kdl(node) for node in obj.getAll('exclude-rule')],
-            fetch_delay=fetch_delay.args[0] if fetch_delay else 1.0,
+            fetch_delay=datetime.timedelta(
+                seconds=pytimeparse.parse(fetch_delay.args[0] if fetch_delay else '1s') or 60
+            ),
             authentication=Authentication.from_kdl(auth) if auth else None,
             unauthorized_when=[UnauthorizationRule.from_kdl(node) for node in obj.getAll('unauthorized-when')],
         )
@@ -488,7 +492,7 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
             )
 
             progress.update(task, description=f'[yellow] {queued.url}')
-            time.sleep(config.fetch_delay)
+            time.sleep(config.fetch_delay.total_seconds())
             progress.update(task, advance=1)
 
 
