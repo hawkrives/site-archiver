@@ -832,6 +832,15 @@ def validate_config(config_file: Path) -> None:
 
 
 @app.command()
+def validate_database(
+    config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
+    database_file: Optional[Path] = None,
+):
+    database_file = database_file or config_file.with_suffix('.sqlite3')
+    connect(database_file, check='full')
+
+
+@app.command()
 def queue_url(
     url: str,
     config_file: Annotated[Path, ReadableFile] = Path('sites.kdl'),
