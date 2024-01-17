@@ -761,6 +761,15 @@ def explore(
 
 
 @app.command()
+def migrate_to_jsonb(database_file: Path):
+    with connect(database_file) as db:
+        log.info('updating "request" table')
+        db.execute('UPDATE request SET headers = jsonb(headers);')
+        log.info('updating "response" table')
+        db.execute('UPDATE response SET headers = jsonb(headers);')
+
+
+@app.command()
 def validate_config(config_file: Path) -> None:
     config = parse_config(config_file)
 
