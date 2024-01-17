@@ -399,9 +399,8 @@ def progress_bar(*, transient: bool):
     )
 
 
-def extract_links(*, database_file: Path, config: ConfigSite, batch_size: int = 100) -> None:
-    with connect(database_file) as db:
-        pending_parse: list[QueuedUrl] = list(db.execute(f'SELECT url, id FROM parse_queue LIMIT {batch_size}'))
+def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 100) -> None:
+    pending_parse: list[QueuedUrl] = list(db.execute(f'SELECT url, id FROM parse_queue LIMIT {batch_size}'))
 
     with progress_bar(transient=True) as progress:
         task = progress.add_task('[red]Parsing...', total=len(pending_parse))
@@ -410,7 +409,7 @@ def extract_links(*, database_file: Path, config: ConfigSite, batch_size: int = 
             base_url = record.url
             progress.update(task, description=f'[cyan] {base_url}')
 
-            with connect(database_file) as db:
+            with db:
                 insert_link(db, base_url)
 
                 unique_links = parse_response_for_links(db, response_id=record.id)
@@ -443,14 +442,13 @@ def fetch_url(
     client: httpx.Client,
     source_link_id: int,
     url: httpx.URL | str,
-    database_file: Path,
+    db: apsw.Connection,
     config: ConfigSite,
     is_retry: bool = False,
 ) -> None:
     try:
         r = get_document(client=client, url=url)
-        with connect(database_file) as db:
-            record_http_pair(db, link_id=source_link_id, response=r, unauthorization_rules=config.unauthorized_when)
+        record_http_pair(db, link_id=source_link_id, response=r, unauthorization_rules=config.unauthorized_when)
     except httpx.HTTPStatusError as http_error:
         if is_retry:
             raise http_error
@@ -461,7 +459,7 @@ def fetch_url(
                 client=client,
                 source_link_id=source_link_id,
                 url=url,
-                database_file=database_file,
+                db=db,
                 config=config,
                 is_retry=True,
             )
@@ -469,9 +467,8 @@ def fetch_url(
             raise http_error
 
 
-def fetch_documents(*, database_file: Path, config: ConfigSite, client: httpx.Client, batch_size: int = 50) -> None:
-    with connect(database_file) as db:
-        pending_fetch: list[QueuedUrl] = list(db.execute(f'SELECT id, url FROM fetch_queue LIMIT {batch_size}'))
+def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Client, batch_size: int = 50) -> None:
+    pending_fetch: list[QueuedUrl] = list(db.execute(f'SELECT id, url FROM fetch_queue LIMIT {batch_size}'))
 
     with progress_bar(transient=True) as progress:
         task = progress.add_task('[green]Fetching...', total=len(pending_fetch))
@@ -484,7 +481,7 @@ def fetch_documents(*, database_file: Path, config: ConfigSite, client: httpx.Cl
                 client=client,
                 url=queued.url,
                 source_link_id=queued.id,
-                database_file=database_file,
+                db=db,
                 config=config,
             )
 
@@ -646,21 +643,18 @@ def crawl(
     config = parse_config(config_file)
     site_config = config.sites[0]
 
-    log.info('Inserting the start URL')
-    with connect(database_file) as db:
+    with connect(database_file) as db, init_client() as client:
+        log.info('Inserting the start URL')
         insert_link(db, site_config.start_url)
 
-    with init_client() as client:
         while True:
-            fetch_documents(database_file=database_file, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
-            extract_links(database_file=database_file, config=site_config, batch_size=parse_batch_size or batch_size)
+            fetch_documents(db=db, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
+            extract_links(db=db, config=site_config, batch_size=parse_batch_size or batch_size)
 
             if once:
                 break
 
-            with connect(database_file) as db:
-                queued = next_in_fetch_queue(db)
-
+            queued = next_in_fetch_queue(db)
             if not queued:
                 break
 
@@ -727,8 +721,8 @@ def fetch(
     config = parse_config(config_file)
     site_config = config.sites[0]
 
-    with init_client() as client:
-        fetch_documents(database_file=database_file, config=site_config, client=client, batch_size=batch_size)
+    with init_client() as client, connect(database_file) as db:
+        fetch_documents(db=db, config=site_config, client=client, batch_size=batch_size)
 
 
 @app.command()
@@ -740,7 +734,8 @@ def sitemap(
     config = parse_config(config_file)
     site_config = config.sites[0]
 
-    extract_links(database_file=database_file, config=site_config, batch_size=batch_size)
+    with connect(database_file) as db:
+        extract_links(db=db, config=site_config, batch_size=batch_size)
 
 
 @app.command()
