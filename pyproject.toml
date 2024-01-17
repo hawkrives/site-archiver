@@ -20,6 +20,7 @@ beautifulsoup4 = "^4.12.2"
 charset-normalizer = {extras = ["unicode-backport"], version = "^3.3.2"}
 retry2 = "^0.9.5"
 lxml = "^5.0.0"
+pytimeparse = "^1.1.8"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.10"
