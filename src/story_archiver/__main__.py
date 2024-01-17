@@ -457,9 +457,6 @@ def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 
 
             progress.update(task, advance=1)
 
-    with db:
-        db.pragma('WAL_CHECKPOINT(RESTART)')
-
 
 @retry_on_connectionerror
 def get_document(*, client: httpx.Client, url: httpx.URL | str) -> httpx.Response:
@@ -547,9 +544,6 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
             )
 
             progress.update(task, advance=1)
-
-    with db:
-        db.pragma('WAL_CHECKPOINT(RESTART)')
 
 
 def init_client() -> httpx.Client:
@@ -674,7 +668,9 @@ def show_response(
     config = parse_config(config_file)
     database_file = database_file or config_file.with_suffix('.sqlite3')
 
-    with connect(database_file) as db:
+    db = connect(database_file)
+
+    with db:
         table = rich.table.Table(title=f'Outbound links from response-id {response_id}')
         table.add_column('FETCH', justify='right', style='cyan')
         table.add_column('URL')
@@ -708,13 +704,16 @@ def crawl(
     log.info(f'waiting {site_config.fetch_delay.total_seconds()} seconds between requests')
     database_file = database_file or config_file.with_suffix('.sqlite3')
 
-    with connect(database_file) as db, init_client() as client:
+    db = connect(database_file)
+
+    with init_client() as client:
         log.info('Inserting the start URL')
         insert_link(db, site_config.start_url)
 
         while True:
-            fetch_documents(db=db, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
-            extract_links(db=db, config=site_config, batch_size=parse_batch_size or batch_size)
+            with db:
+                fetch_documents(db=db, config=site_config, client=client, batch_size=fetch_batch_size or batch_size)
+                extract_links(db=db, config=site_config, batch_size=parse_batch_size or batch_size)
 
             if once:
                 break
@@ -786,8 +785,9 @@ def fetch(
     config = parse_config(config_file)
     site_config = config.sites[0]
     database_file = database_file or config_file.with_suffix('.sqlite3')
+    db = connect(database_file)
 
-    with init_client() as client, connect(database_file) as db:
+    with init_client() as client, db:
         fetch_documents(db=db, config=site_config, client=client, batch_size=batch_size)
 
 
@@ -800,8 +800,9 @@ def explore(
     config = parse_config(config_file)
     site_config = config.sites[0]
     database_file = database_file or config_file.with_suffix('.sqlite3')
+    db = connect(database_file)
 
-    with connect(database_file) as db:
+    with db:
         extract_links(db=db, config=site_config, batch_size=batch_size)
 
 
