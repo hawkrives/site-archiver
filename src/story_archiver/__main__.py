@@ -236,6 +236,15 @@ def ensure_schema(db: apsw.Connection):
                 """
             )
 
+    if db.pragma('user_version') == 4:
+        with db:
+            log.info('updating "request" table')
+            db.execute('UPDATE request SET headers = jsonb(headers);')
+            log.info('updating "response" table')
+            db.execute('UPDATE response SET headers = jsonb(headers);')
+            log.info('update complete!')
+            db.execute('PRAGMA user_version = 5;')
+
 
 def connect(database_file: Path):
     connection = apsw.Connection(str(database_file))
@@ -758,15 +767,6 @@ def explore(
 
     with connect(database_file) as db:
         extract_links(db=db, config=site_config, batch_size=batch_size)
-
-
-@app.command()
-def migrate_to_jsonb(database_file: Path):
-    with connect(database_file) as db:
-        log.info('updating "request" table')
-        db.execute('UPDATE request SET headers = jsonb(headers);')
-        log.info('updating "response" table')
-        db.execute('UPDATE response SET headers = jsonb(headers);')
 
 
 @app.command()
