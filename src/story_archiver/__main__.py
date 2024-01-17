@@ -347,7 +347,6 @@ def record_http_response(
                 response.status_code = 401
                 response.raise_for_status()
                 assert False, 'we should not be at this point'
-                # raise httpx.HTTPStatusError('Unauthorized', request=None, response=response)
 
         response_row = db.execute(
             """
@@ -717,18 +716,18 @@ def crawl_tree(
     # log.info('Inserting the start URL')
     # with connect(database_file) as db:
     #     insert_link(db, site_config.start_url)
-
+    #
     # with init_client() as client:
     #     while True:
     #         fetch_documents(database_file=database_file, config=site_config, client=client)
     #         extract_links(database_file=database_file, config=site_config)
-
+    #
     #         if once:
     #             break
-
+    #
     #         with connect(database_file) as db:
     #             queued = next_in_fetch_queue(db)
-
+    #
     #         if not queued:
     #             break
 
