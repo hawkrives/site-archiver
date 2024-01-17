@@ -105,7 +105,13 @@ class ConfigSite:
 
     @staticmethod
     def from_kdl(obj: kdl.types.Node) -> 'ConfigSite':
-        fetch_delay = obj.get('fetch-delay')
+        fetch_delay_node = obj.get('fetch-delay')
+
+        fetch_delay_value = fetch_delay_node.args[0] if fetch_delay_node else '1s'
+        if isinstance(fetch_delay_value, float):
+            fetch_delay_value = str(fetch_delay_value)
+        fetch_delay = datetime.timedelta(seconds=pytimeparse.parse(fetch_delay_value) or 60)
+
         start_url = obj.get('start-url')
         assert start_url, 'a start-url node is required'
         auth = obj.get('authentication')
@@ -114,9 +120,7 @@ class ConfigSite:
             start_url=httpx.URL(start_url.args[0]),
             include_rules=[UrlRule.from_kdl(node) for node in obj.getAll('include-rule')],
             exclude_rules=[UrlRule.from_kdl(node) for node in obj.getAll('exclude-rule')],
-            fetch_delay=datetime.timedelta(
-                seconds=pytimeparse.parse(fetch_delay.args[0] if fetch_delay else '1s') or 60
-            ),
+            fetch_delay=fetch_delay,
             authentication=Authentication.from_kdl(auth) if auth else None,
             unauthorized_when=[UnauthorizationRule.from_kdl(node) for node in obj.getAll('unauthorized-when')],
         )
