@@ -458,6 +458,9 @@ def extract_links(*, db: apsw.Connection, config: ConfigSite, batch_size: int = 
 
             progress.update(task, advance=1)
 
+    with db:
+        db.pragma('WAL_CHECKPOINT(RESTART)')
+
 
 @retry_on_connectionerror
 def get_document(*, client: httpx.Client, url: httpx.URL | str) -> httpx.Response:
@@ -545,6 +548,9 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
             )
 
             progress.update(task, advance=1)
+
+    with db:
+        db.pragma('WAL_CHECKPOINT(RESTART)')
 
 
 def init_client() -> httpx.Client:
