@@ -558,8 +558,10 @@ def fetch_documents(*, db: apsw.Connection, config: ConfigSite, client: httpx.Cl
         task = progress.add_task('[green]Fetching...', total=len(pending_fetch))
 
         for queued in pending_fetch:
+            progress.stop_task(task)
             progress.update(task, description=f'[yellow] WAIT  {queued.url}')
             delay_urlfetch(config=config)
+            progress.start_task(task)
 
             progress.update(task, description=f'[green] GET   {queued.url}')
 
