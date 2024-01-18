@@ -702,8 +702,8 @@ def crawl(
     check: bool = True,
     once: bool = False,
     batch_size: int = 50,
-    fetch_batch_size: int = 0,
-    parse_batch_size: int = 0,
+    fetch_batch_size: int = 50,
+    parse_batch_size: int = 500,
 ):
     config = parse_config(config_file)
     site_config = config.sites[0]
