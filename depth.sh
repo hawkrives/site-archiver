@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 for file in *.sqlite3; do
-  sqlite3 --readonly "$file" "
+  sqlite3 --readonly  --csv "$file" "
     select 
       '$(basename "$file" .sqlite3)' as file,
        (select count(*) from response) as done,
@@ -10,4 +10,4 @@ for file in *.sqlite3; do
     group by file
     having fetch > 0
   "
-done
+done | xsv table
