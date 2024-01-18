@@ -425,6 +425,12 @@ def next_in_fetch_queue(db: apsw.Connection) -> QueuedUrl | None:
 
 
 @retry_on_busy
+def next_in_parse_queue(db: apsw.Connection) -> QueuedUrl | None:
+    with db:
+        return db.execute('SELECT id, url FROM parse_queue').fetchone()
+
+
+@retry_on_busy
 def mark_response_as_parsed(db: apsw.Connection, *, response_id: int) -> UnparsedResponseId | None:
     with db:
         return db.execute('UPDATE response SET parsed = 1 WHERE id = :id', dict(id=response_id)).fetchone()
@@ -740,7 +746,7 @@ def crawl(
             if once:
                 break
 
-            queued = next_in_fetch_queue(db)
+            queued = next_in_fetch_queue(db) or next_in_parse_queue(db)
             if not queued:
                 break
 
