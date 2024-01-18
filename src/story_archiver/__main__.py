@@ -371,6 +371,11 @@ def record_http_response(
         if 'cf-ray' in headers:
             del headers['cf-ray']
 
+        if headers.get('server') == 'cloudflare' and headers.get('location') == '/err429.html':
+            response.status_code = 429
+            response.raise_for_status()
+            assert False, 'we should not be at this point'
+
         if unauthorization_rules:
             response_text = response.text
             if any(rule.body in response_text for rule in unauthorization_rules):
@@ -512,6 +517,18 @@ def fetch_url(
     except httpx.HTTPStatusError as http_error:
         if is_retry:
             raise http_error
+
+        if http_error.response.status_code == 429:
+            log.info('got a 429; sleeping for 5 minutes')
+            time.sleep(300)
+            fetch_url(
+                client=client,
+                source_link_id=source_link_id,
+                url=url,
+                db=db,
+                config=config,
+                is_retry=True,
+            )
 
         if config.authentication:
             authenticate(client=client, config=config)
